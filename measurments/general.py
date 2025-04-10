@@ -7,7 +7,18 @@ from collections import deque
 
 def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
     """
-    Returns the vertical limits of the rheometer in the frame.
+    Inputs:
+    
+    frame is the current frame of the video, it can be bgr or grayscale.
+    
+    prev_yt and prev_yb are the y-coordinates of the previous frame's upper
+    and lower lines of the rheometer, respectively. On the first frame of the
+    video they should be None.
+    
+    Returns:
+
+    The y-coordinates of the upper and lower lines of the rheometer in the
+    current frame.
     """
     if prev_yt:
         prev_yts.append(prev_yt)
@@ -31,7 +42,7 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
 
     horizontal_lines = []
     
-    if lines is None:
+    if len(lines) == 0:
         return avg_yt, avg_yb
     
     for line in lines:
@@ -39,7 +50,7 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
         if abs(y2 - y1) < 10:
             if x1 > x2:
                 x1, y1, x2, y2 = x2, y2, x1, y1 # y1 is always the leftmost point y-coordinate
-            horizontal_lines.append(line[0])
+            horizontal_lines.append((x1, y1, x2, y2))
     
     if not horizontal_lines:
         return avg_yt, avg_yb
@@ -49,7 +60,6 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
 
     upper_lines = []
     lower_lines = []
-
 
 
     for line in horizontal_lines:
@@ -80,12 +90,25 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
 def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
                 right: bool = True):
     """
-    Returns the x-coordinates of the non-moving edge of the rheometer in the frame.
+    Inputs:
+    frame is the current frame of the video, it can be bgr or grayscale.
+
+    upper_line and lower_line are the y-coordinates of the upper and lower
+    lines of the rheometer, respectively.
+
+    prev_x is the x-coordinate of the previous frame's edge, on the first frame
+    of the video it should be None.
+    
+    right is a boolean that indicates whether the non-moving edge is on the 
+    right or the left side of the video. 
+    
+    Returns:
+    The x-coordinate of the non-moving edge of the rheometer in the current frame.
     """
     if prev_x:
-        prev_xs.append(prev_x)
-    if len(prev_xs) >= 1:
-        prev_x = int(np.mean(prev_xs))
+        prev_still_xs.append(prev_x)
+    if len(prev_still_xs) >= 1:
+        prev_x = int(np.mean(prev_still_xs))
 
     if frame.shape[2] == 3:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -99,7 +122,6 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
     edges = cv.Canny(blurred_frame, 50, 100, apertureSize=3)
     
     masked_edges = cv.bitwise_and(edges, mask)
-    cv.imshow("Masked Edges", masked_edges)
     
     lines = cv.HoughLinesP(masked_edges, 1, np.pi / 180, threshold=50,
                             minLineLength=20, maxLineGap=10)
@@ -113,9 +135,9 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
         if abs(x2 - x1) < 10:
             if y1 > y2:
                 x1, y1, x2, y2 = x2, y2, x1, y1 # x1 is always the topmost point x-coordinate
-            vertical_lines.append(line[0])
+            vertical_lines.append((x1, y1, x2, y2))
 
-    if  not len(vertical_lines):
+    if  len(vertical_lines) == 0:
         return prev_x
 
     if right:
@@ -128,36 +150,79 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
     if prev_x and abs(x1 - prev_x) > 5 and abs(x2 - prev_x) > 5:
         return prev_x
     
-    return int((x1+x2)/2)
-
-def moving_edge(frame, top_limit, bottom_limit, x):
-    if frame.shape[2] == 3:
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    else:
-        gray = np.copy(frame)
-
+    x = int((x1+x2)/2)
+    prev_still_xs.append(x)
+    x = int(np.mean(prev_still_xs))
     
-    lines = []
-    lines = cv.HoughLinesP(canny, 1, np.pi / 180, 1, minLineLength=20,
+    return x
+
+
+def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
+                 left: bool = True):
+    """
+    Inputs:
+
+    Returns:
+
+    TODO: Add distance from the non-moving edge and add a cap so that the moving
+    edge x coordinate is not too far from the non-moving edge x coordinate to avoid
+    detecting wrong edges, and to capture the moment when the moving edge stops
+    moving.
+    """
+    
+    if frame.shape[2] == 3:
+        gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    else:
+        gray_frame = np.copy(frame)
+    
+    edges = cv.Canny(gray_frame, 50, 100, apertureSize=3)
+
+    mask = np.zeros_like(gray_frame)
+    if prev_x:
+        mask[upper_line:lower_line, prev_x-10:prev_x+10] = 255
+    else:
+        mask[upper_line:lower_line, :] = 255
+
+    masked_edges = cv.bitwise_and(edges, mask)
+
+    lines = cv.HoughLinesP(masked_edges, 1, np.pi / 180, 1, minLineLength=20,
                             maxLineGap=30)
-    if lines is None:
-        return x
+    if lines is None or len(lines) == 0:
+        return prev_x
+
     vertical_lines = []
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        tan = (x2 - x1) / (y2 - y1)
-        if abs(np.degrees(np.arctan(tan))) < 5:
-            vertical_lines.append(line)
-    if len(vertical_lines) == 0:
-        return x
-    else:
-        canny = cv.cvtColor(canny, cv.COLOR_GRAY2BGR)
-        return min(vertical_lines, key=lambda x: x[0][0])[0][0]
+        if abs(x2 - x1) < 10:
+            if y1 > y2:
+                x1, y1, x2, y2 = x2, y2, x1, y1 # x1 is always the topmost point x-coordinate
+            vertical_lines.append((x1, y1, x2, y2))
 
+    if  len(vertical_lines) == 0:
+        return prev_x
+
+    if left:
+        x1 = min(vertical_lines, key=lambda x: x[0])[0]
+        x2 = min(vertical_lines, key=lambda x: x[2])[2]
+    else:
+        x1 = max(vertical_lines, key=lambda x: x[0])[0]
+        x2 = max(vertical_lines, key=lambda x: x[2])[2]
+
+    if prev_x and abs(x1 - prev_x) > 5 and abs(x2 - prev_x) > 5:
+        return prev_x
     
-video_path = "videos/C0211.MP4"
-prev_x = None
-prev_xs = deque(maxlen=5)
+    x = int((x1+x2)/2)
+
+    return x
+    
+    
+video_path = "videos/C0210.MP4"
+
+prev_still_x = None
+prev_still_xs = deque(maxlen=5)
+
+prev_moving_x = None
+prev_moving_xs = deque(maxlen=5)
 
 prev_yt = None
 prev_yts = deque(maxlen=10)
@@ -166,22 +231,27 @@ prev_yb = None
 prev_ybs = deque(maxlen=10)
 
 cap = cv.VideoCapture(video_path)
+
 while True:
     ret, frame = cap.read()
-    frame = cv.resize(frame, (640, 480))
     if not ret:
         break
+    frame = cv.resize(frame, (640, 480))
 
     top_y, bottom_y = vertical_limits(frame, prev_yt, prev_yb)
     prev_yt = top_y
     prev_yb = bottom_y
     
-    x_still = still_edge(frame, top_y, bottom_y, prev_x, right=True)
+    x_still = still_edge(frame, top_y, bottom_y, prev_still_x, right=True)
     prev_x = x_still
+
+    x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, left=True)
+    prev_moving_x = x_moving
 
     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
     cv.line(frame, (x_still, top_y), (x_still, bottom_y), (255, 0, 0), 2)
+    cv.line(frame, (x_moving, top_y), (x_moving, bottom_y), (255, 0, 0), 2)
 
     cv.imshow("Frame", frame)
     if cv.waitKey(1) & 0xFF == ord('q'):
