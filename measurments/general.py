@@ -100,7 +100,7 @@ def vertical_limits(frame: np.ndarray, prev_yts=None, prev_ybs=None):
     return yt, yb
 
 
-def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
+def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
                 right: bool = True):
     """
     Inputs:
@@ -118,10 +118,11 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
     Returns:
     The x-coordinate of the non-moving edge of the rheometer in the current frame.
     """
-    if prev_x:
-        prev_still_xs.append(prev_x)
+
     if len(prev_still_xs) >= 1:
         prev_x = int(np.mean(prev_still_xs))
+    else:
+        prev_x = None
 
     if frame.shape[2] == 3:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -164,8 +165,8 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
         return prev_x
     
     x = int((x1+x2)/2)
-    prev_still_xs.append(x)
-    x = int(np.mean(prev_still_xs))
+    prev_xs.append(x)
+    x = int(np.mean(prev_xs))
     
     return x
 
@@ -265,9 +266,9 @@ prev_still_xs = deque(maxlen=5)
 
 prev_moving_x = None
 
-prev_yts = deque(maxlen=10)
+oprev_yts = deque(maxlen=10)
 
-prev_ybs = deque(maxlen=10)
+oprev_ybs = deque(maxlen=10)
 
 cap = cv.VideoCapture(video_path)
 
@@ -279,9 +280,9 @@ while True:
         break
     frame = cv.resize(frame, (640, 480))
 
-    top_y, bottom_y = vertical_limits(frame, prev_yts, prev_ybs)
+    top_y, bottom_y = vertical_limits(frame, oprev_yts, oprev_ybs)
     
-    x_still = still_edge(frame, top_y, bottom_y, prev_still_x, right=True)
+    x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
     prev_x = x_still
 
     x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
