@@ -97,6 +97,9 @@ def vertical_limits(frame: np.ndarray, prev_yts=None, prev_ybs=None):
     prev_ybs.append(yb)
     prev_yts.append(yt)
 
+    yt = int(np.mean(prev_yts))
+    yb = int(np.mean(prev_ybs))
+
     return yt, yb
 
 
@@ -119,10 +122,10 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
     The x-coordinate of the non-moving edge of the rheometer in the current frame.
     """
 
-    if len(prev_still_xs) >= 1:
-        prev_x = int(np.mean(prev_still_xs))
+    if len(prev_xs) >= 1:
+        avg_x = int(np.mean(prev_xs))
     else:
-        prev_x = None
+        avg_x = None
 
     if frame.shape[2] == 3:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -141,7 +144,7 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
                             minLineLength=20, maxLineGap=10)
     
     if lines is None or len(lines) == 0:
-        return prev_x
+        return avg_x
 
     vertical_lines = []
     for line in lines:
@@ -152,7 +155,7 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
             vertical_lines.append((x1, y1, x2, y2))
 
     if  len(vertical_lines) == 0:
-        return prev_x
+        return avg_x
 
     if right:
         x1 = max(vertical_lines, key=lambda x: x[0])[0]
@@ -161,8 +164,8 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
         x1 = min(vertical_lines, key=lambda x: x[0])[0]
         x2 = min(vertical_lines, key=lambda x: x[2])[2]
 
-    if prev_x and abs(x1 - prev_x) > 5 and abs(x2 - prev_x) > 5:
-        return prev_x
+    if avg_x and abs(x1 - avg_x) > 5 and abs(x2 - avg_x) > 5:
+        return avg_x
     
     x = int((x1+x2)/2)
     prev_xs.append(x)
@@ -178,10 +181,6 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
 
     Returns:
 
-    TODO: Add distance from the non-moving edge and add a cap so that the moving
-    edge x coordinate is not too far from the non-moving edge x coordinate to avoid
-    detecting wrong edges, and to capture the moment when the moving edge stops
-    moving.
     """
     
     if frame.shape[2] == 3:
@@ -226,7 +225,6 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
         return prev_x
     
     x = int((x1+x2)/2)
-    distances.append(abs(x - still_edge_x))
 
     return x
 
@@ -257,49 +255,67 @@ def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
 
     edges = cv.Canny(blurred_frame, 20, 100, apertureSize=3)
     masked_edges = cv.bitwise_and(edges, mask)
+
+    xd_middle = (x_moving + x_still) // 2 # x-coordinate of the middle of the fluid
+    mid_values = masked_edges[upper_line:lower_line, xd_middle] # values of a slice of the middle of the fluid
+
+    yd_bottom = None
+    yd_top = None
+
+    for i, val in enumerate(mid_values):
+        if val == 255:
+            yd_bottom = i + upper_line
+    for i, val in enumerate(mid_values[::-1]):
+        if val == 255 :
+            yd_top = lower_line - i
+
+    if yd_bottom and yd_top:
+        cv.line(frame, (xd_middle, yd_top), (xd_middle, yd_bottom),
+                (0, 255, 0), 2)
     
+
     
-video_path = "videos/C0210.MP4"
+# video_path = "videos/C0210.MP4"
 
-prev_still_x = None
-prev_still_xs = deque(maxlen=5)
+# prev_still_x = None
+# prev_still_xs = deque(maxlen=5)
 
-prev_moving_x = None
+# prev_moving_x = None
 
-oprev_yts = deque(maxlen=10)
+# oprev_yts = deque(maxlen=10)
 
-oprev_ybs = deque(maxlen=10)
+# oprev_ybs = deque(maxlen=10)
 
-cap = cv.VideoCapture(video_path)
+# cap = cv.VideoCapture(video_path)
 
-distances = []
+# distances = []
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    frame = cv.resize(frame, (640, 480))
+# while True:
+#     ret, frame = cap.read()
+#     if not ret:
+#         break
+#     frame = cv.resize(frame, (640, 480))
 
-    top_y, bottom_y = vertical_limits(frame, oprev_yts, oprev_ybs)
+#     top_y, bottom_y = vertical_limits(frame, oprev_yts, oprev_ybs)
     
-    x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
-    prev_x = x_still
+#     x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
+#     prev_x = x_still
 
-    x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
-                             left=True)
-    prev_moving_x = x_moving
+#     x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
+#                              left=True)
+#     prev_moving_x = x_moving
 
-    fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
+#     fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
 
-    cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
-    cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
-    cv.line(frame, (x_still, top_y), (x_still, bottom_y), (255, 0, 0), 2)
-    cv.line(frame, (x_moving, top_y), (x_moving, bottom_y), (255, 0, 0), 2)
+#     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
+#     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
+#     cv.line(frame, (x_still, top_y), (x_still, bottom_y), (255, 0, 0), 2)
+#     cv.line(frame, (x_moving, top_y), (x_moving, bottom_y), (255, 0, 0), 2)
 
-    cv.imshow("Frame", frame)
-    if cv.waitKey(1) & 0xFF == ord('q'):
-        break
+#     cv.imshow("Frame", frame)
+#     if cv.waitKey(1) & 0xFF == ord('q'):
+#         break
 
-cap.release()
-cv.destroyAllWindows()
+# cap.release()
+# cv.destroyAllWindows()
 
