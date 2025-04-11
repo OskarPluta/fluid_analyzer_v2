@@ -1,9 +1,18 @@
 """
 Works well for videos with white background and black rheometer.
+
+TODO: Make it so that the functions take deque objects as inputs, so that they
+can be used in different files, on different videos.
+
+TODO: Finish the fluid_middle_diameter function, save the diameter of the middle,
+based on the distance changes get the point in time when the machine stops moving,
+and calculate the diamter ratio starting on from this point in time, save results
+to a file and plot them.
 """
 import cv2 as cv
 import numpy as np
 from collections import deque
+import matplotlib.pyplot as plt
 
 def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
     """
@@ -158,7 +167,7 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_x=None,
 
 
 def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
-                 left: bool = True):
+                 left: bool = True, distance_cap=100):
     """
     Inputs:
 
@@ -180,8 +189,8 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
     mask = np.zeros_like(gray_frame)
     if prev_x:
         mask[upper_line:lower_line, prev_x-10:prev_x+10] = 255
-    else:
-        mask[upper_line:lower_line, :] = 255
+    elif left:
+        mask[upper_line:lower_line, still_edge_x-distance_cap:] = 255
 
     masked_edges = cv.bitwise_and(edges, mask)
 
@@ -212,17 +221,45 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
         return prev_x
     
     x = int((x1+x2)/2)
+    distances.append(abs(x - still_edge_x))
 
     return x
+
+def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
+    """
+    Inputs:
+    frame is the current frame of the video, it can be bgr or grayscale.
+
+    x_still and x_moving are the x-coordinates of the non-moving and moving
+    edges of the rheometer, respectively.
+
+    upper_line and lower_line are the y-coordinates of the upper and lower
+    lines of the rheometer, respectively.
+
+    Returns:
+    The diameter of the fluid in the rheometer in the current frame.
+    """
+    
+    if frame.shape[2] == 3:
+        gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    else:
+        gray_frame = np.copy(frame)
+
+    mask = np.zeros_like(gray_frame)
+    mask[upper_line:lower_line, x_moving:x_still] = 255
+
+    blurred_frame = cv.GaussianBlur(gray_frame, (3, 3), 0)
+
+    edges = cv.Canny(blurred_frame, 20, 100, apertureSize=3)
+    masked_edges = cv.bitwise_and(edges, mask)
     
     
-video_path = "videos/C0210.MP4"
+video_path = "videos/C0211.MP4"
 
 prev_still_x = None
 prev_still_xs = deque(maxlen=5)
 
 prev_moving_x = None
-prev_moving_xs = deque(maxlen=5)
 
 prev_yt = None
 prev_yts = deque(maxlen=10)
@@ -231,6 +268,8 @@ prev_yb = None
 prev_ybs = deque(maxlen=10)
 
 cap = cv.VideoCapture(video_path)
+
+distances = []
 
 while True:
     ret, frame = cap.read()
@@ -245,8 +284,11 @@ while True:
     x_still = still_edge(frame, top_y, bottom_y, prev_still_x, right=True)
     prev_x = x_still
 
-    x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, left=True)
+    x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
+                             left=True)
     prev_moving_x = x_moving
+
+    fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
 
     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
@@ -257,6 +299,6 @@ while True:
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
-
-
+cap.release()
+cv.destroyAllWindows()
 
