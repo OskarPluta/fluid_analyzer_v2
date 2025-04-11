@@ -14,7 +14,7 @@ import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
 
-def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
+def vertical_limits(frame: np.ndarray, prev_yts=None, prev_ybs=None):
     """
     Inputs:
     
@@ -29,15 +29,16 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
     The y-coordinates of the upper and lower lines of the rheometer in the
     current frame.
     """
-    if prev_yt:
-        prev_yts.append(prev_yt)
+
     if len(prev_yts) >= 1:
         avg_yt = int(np.mean(prev_yts))
+    else:
+        avg_yt = None
 
-    if prev_yb:
-        prev_ybs.append(prev_yb)
     if len(prev_ybs) >= 1:
         avg_yb = int(np.mean(prev_ybs))
+    else:
+        avg_yb = None
 
     if frame.shape[2] == 3:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -88,10 +89,13 @@ def vertical_limits(frame: np.ndarray, prev_yt=None, prev_yb=None):
     yt = int((yt1 + yt2) / 2)
     yb = int((yb1 + yb2) / 2)
 
-    if prev_yt and abs(yt - avg_yt) > 5:
+    if avg_yt and abs(yt - avg_yt) > 10:
         yt = avg_yt
-    if prev_yb and abs(yb - avg_yb) > 5:
+    if avg_yb and abs(yb - avg_yb) > 10:
         yb = avg_yb
+
+    prev_ybs.append(yb)
+    prev_yts.append(yt)
 
     return yt, yb
 
@@ -254,17 +258,15 @@ def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
     masked_edges = cv.bitwise_and(edges, mask)
     
     
-video_path = "videos/C0211.MP4"
+video_path = "videos/C0210.MP4"
 
 prev_still_x = None
 prev_still_xs = deque(maxlen=5)
 
 prev_moving_x = None
 
-prev_yt = None
 prev_yts = deque(maxlen=10)
 
-prev_yb = None
 prev_ybs = deque(maxlen=10)
 
 cap = cv.VideoCapture(video_path)
@@ -277,9 +279,7 @@ while True:
         break
     frame = cv.resize(frame, (640, 480))
 
-    top_y, bottom_y = vertical_limits(frame, prev_yt, prev_yb)
-    prev_yt = top_y
-    prev_yb = bottom_y
+    top_y, bottom_y = vertical_limits(frame, prev_yts, prev_ybs)
     
     x_still = still_edge(frame, top_y, bottom_y, prev_still_x, right=True)
     prev_x = x_still
