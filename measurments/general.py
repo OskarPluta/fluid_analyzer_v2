@@ -232,48 +232,4 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
     return x, distance
     
 
-    
-# video_path = "videos/C0210.MP4"
-
-# prev_still_x = None
-# prev_still_xs = deque(maxlen=5)
-
-# prev_moving_x = None
-
-# oprev_yts = deque(maxlen=10)
-
-# oprev_ybs = deque(maxlen=10)
-
-# cap = cv.VideoCapture(video_path)
-
-# distances = []
-
-# while True:
-#     ret, frame = cap.read()
-#     if not ret:
-#         break
-#     frame = cv.resize(frame, (640, 480))
-
-#     top_y, bottom_y = vertical_limits(frame, oprev_yts, oprev_ybs)
-    
-#     x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
-#     prev_x = x_still
-
-#     x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
-#                              left=True)
-#     prev_moving_x = x_moving
-
-#     fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
-
-#     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
-#     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
-#     cv.line(frame, (x_still, top_y), (x_still, bottom_y), (255, 0, 0), 2)
-#     cv.line(frame, (x_moving, top_y), (x_moving, bottom_y), (255, 0, 0), 2)
-
-#     cv.imshow("Frame", frame)
-#     if cv.waitKey(1) & 0xFF == ord('q'):
-#         break
-
-# cap.release()
-# cv.destroyAllWindows()
 

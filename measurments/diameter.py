@@ -68,6 +68,7 @@ cap = cv.VideoCapture(video_path)
 
 distances = []
 diameters = []
+distances_deque = deque(maxlen=10)
 
 while True:
     ret, frame = cap.read()
@@ -78,7 +79,7 @@ while True:
     top_y, bottom_y = vertical_limits(frame, oprev_yts, oprev_ybs)
     
     x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
-    prev_x = x_still
+    prev_still_x = x_still
 
     x_moving, distance = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
                                     left=True)
@@ -88,6 +89,7 @@ while True:
 
     distances.append(distance)
     diameters.append(d_mid)
+    distances_deque.append(distance)
 
     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
