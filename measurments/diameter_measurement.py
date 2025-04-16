@@ -26,6 +26,9 @@ class FluidDiameterMeasurement:
         self.movement_start_index = None # frame index of the first frame when the machine starts moving
         self.movement_end_index = None # frame index of the first frame when the machine stops moving
 
+        self.initial_diameter = None # initial diameter of the fluid in the rheometer
+        # after it stops moving
+
     def vertical_limits(self, frame: np.ndarray):
         """
         
@@ -268,6 +271,8 @@ class FluidDiameterMeasurement:
             cv.line(frame, (x_middle, yd_top), (x_middle, yd_bottom), (255, 0, 255), 2)
             diameter = yd_bottom - yd_top # diameter of the fluid in the rheometer
             self.diameters.append(diameter)
+            if self.movement_end:
+                print("Diameter: ", diameter)
         else:
             self.diameters.append(-1) # if the diameter is not found, append -1
 
@@ -283,11 +288,21 @@ class FluidDiameterMeasurement:
             if  max(self.distances_deque) - min(self.distances_deque) < 10:
                 self.movement_end = True
                 self.movement_end_index = self.frame_index
+                self.initial_diameter = self.diameters[-1]
+                print('now')
 
-            
+    def measure(self, frame: np.ndarray):
+        """
+        Measures the diameter of the fluid in the rheometer.
+        """
+        self.frame_index += 1
+        self.vertical_limits(frame)
+        self.still_edge(frame, right=True)
+        self.moving_edge(frame, left=True)
+        self.fluid_middle_diameter(frame)
+        self.is_moving()
         
         
-    
 video_path = "videos/C0210.MP4"
 cap = cv.VideoCapture(video_path)
 
@@ -300,21 +315,23 @@ while cap.isOpened():
 
     frame = cv.resize(frame, (640, 480))
 
-    diameter_measurement.vertical_limits(frame)
-    diameter_measurement.still_edge(frame, right=True)
-    diameter_measurement.moving_edge(frame, left=True)
-    diameter_measurement.fluid_middle_diameter(frame)
-    diameter_measurement.is_moving()
+    diameter_measurement.measure(frame)
     cv.line(frame, (0, diameter_measurement.upper_line), (frame.shape[1], diameter_measurement.upper_line), (0, 255, 0), 2)
     cv.line(frame, (0, diameter_measurement.lower_line), (frame.shape[1], diameter_measurement.lower_line), (0, 255, 0), 2)
     cv.line(frame, (diameter_measurement.still_x, diameter_measurement.upper_line), (diameter_measurement.still_x, diameter_measurement.lower_line), (255, 0, 0), 2)
     cv.line(frame, (diameter_measurement.moving_x, diameter_measurement.upper_line), (diameter_measurement.moving_x, diameter_measurement.lower_line), (0, 0, 255), 2)
-    print(diameter_measurement.movement_end)
 
     cv.imshow("Vertical Limits", frame)
-    if cv.waitKey(1) & 0xFF == ord('q'):
+    if cv.waitKey(10) & 0xFF == ord('q'):
         break
 
-print(diameter_measurement.distances_deque)
-plt.plot(diameter_measurement.distances)
+cv.destroyAllWindows()
+fps = cap.get(cv.CAP_PROP_FPS)
+
+
+plot_diameters = diameter_measurement.diameters[diameter_measurement.movement_end_index:]
+plot_diameters = [d/diameter_measurement.initial_diameter for d in plot_diameters if d != -1] # remove -1 from the list
+time = [1/fps * i for i in range(len(plot_diameters))]
+
+plt.scatter(time, plot_diameters)
 plt.show()
