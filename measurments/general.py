@@ -20,9 +20,8 @@ def vertical_limits(frame: np.ndarray, prev_yts=None, prev_ybs=None):
     
     frame is the current frame of the video, it can be bgr or grayscale.
     
-    prev_yt and prev_yb are the y-coordinates of the previous frame's upper
-    and lower lines of the rheometer, respectively. On the first frame of the
-    video they should be None.
+    prev_yts and prev_ybs are deque objects storing y-coordinates of the previous 
+    frame's upper and lower lines of the rheometer, respectively.
     
     Returns:
 
@@ -103,7 +102,7 @@ def vertical_limits(frame: np.ndarray, prev_yts=None, prev_ybs=None):
     return yt, yb
 
 
-def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
+def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs: deque,
                 right: bool = True):
     """
     Inputs:
@@ -112,8 +111,8 @@ def still_edge(frame: np.ndarray, upper_line, lower_line, prev_xs,
     upper_line and lower_line are the y-coordinates of the upper and lower
     lines of the rheometer, respectively.
 
-    prev_x is the x-coordinate of the previous frame's edge, on the first frame
-    of the video it should be None.
+    prev_xs is a deque object that stores the x-coordinates of the non-moving
+    edge of the rheometer in the previous frames.
     
     right is a boolean that indicates whether the non-moving edge is on the 
     right or the left side of the video. 
@@ -180,7 +179,9 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
     Inputs:
 
     Returns:
+    x is the x-coordinate of the moving edge of the rheometer in the current frame.
 
+    distance is the distance between the moving edge and the non-moving edge.
     """
     
     if frame.shape[2] == 3:
@@ -226,52 +227,9 @@ def moving_edge(frame, upper_line, lower_line, prev_x, still_edge_x,
     
     x = int((x1+x2)/2)
 
-    return x
+    distance = abs(x - still_edge_x)
 
-def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
-    """
-    Inputs:
-    frame is the current frame of the video, it can be bgr or grayscale.
-
-    x_still and x_moving are the x-coordinates of the non-moving and moving
-    edges of the rheometer, respectively.
-
-    upper_line and lower_line are the y-coordinates of the upper and lower
-    lines of the rheometer, respectively.
-
-    Returns:
-    The diameter of the fluid in the rheometer in the current frame.
-    """
-    
-    if frame.shape[2] == 3:
-        gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    else:
-        gray_frame = np.copy(frame)
-
-    mask = np.zeros_like(gray_frame)
-    mask[upper_line:lower_line, x_moving:x_still] = 255
-
-    blurred_frame = cv.GaussianBlur(gray_frame, (3, 3), 0)
-
-    edges = cv.Canny(blurred_frame, 20, 100, apertureSize=3)
-    masked_edges = cv.bitwise_and(edges, mask)
-
-    xd_middle = (x_moving + x_still) // 2 # x-coordinate of the middle of the fluid
-    mid_values = masked_edges[upper_line:lower_line, xd_middle] # values of a slice of the middle of the fluid
-
-    yd_bottom = None
-    yd_top = None
-
-    for i, val in enumerate(mid_values):
-        if val == 255:
-            yd_bottom = i + upper_line
-    for i, val in enumerate(mid_values[::-1]):
-        if val == 255 :
-            yd_top = lower_line - i
-
-    if yd_bottom and yd_top:
-        cv.line(frame, (xd_middle, yd_top), (xd_middle, yd_bottom),
-                (0, 255, 0), 2)
+    return x, distance
     
 
     

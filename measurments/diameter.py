@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 from collections import deque
 from general import vertical_limits, still_edge, moving_edge
-
+import matplotlib.pyplot as plt
 
 def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
     """
@@ -35,8 +35,8 @@ def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
     xd_middle = (x_moving + x_still) // 2 # x-coordinate of the middle of the fluid
     mid_values = masked_edges[upper_line:lower_line, xd_middle] # values of a slice of the middle of the fluid
 
-    yd_bottom = None
-    yd_top = None
+    yd_bottom = None # y-coordinate of the bottom of the middle diameter
+    yd_top = None # y-coordinate of the top of the middle diameter
 
     for i, val in enumerate(mid_values):
         if val == 255:
@@ -46,11 +46,14 @@ def fluid_middle_diameter(frame, x_still, x_moving, upper_line, lower_line):
             yd_top = lower_line - i
 
     if yd_bottom and yd_top:
-        cv.line(frame, (xd_middle, yd_top), (xd_middle, yd_bottom),
-                (0, 255, 0), 2)
-        
+        cv.line(frame, (xd_middle, yd_top), (xd_middle, yd_bottom), (255, 0, 255), 2)
+        diameter = yd_bottom - yd_top # diameter of the fluid in the rheometer
+        return diameter
+    
+    return -1 # if the diameter is not found, return -1
+    
 
-video_path = "videos/C0210.MP4"
+video_path = "videos/C0211.MP4"
 
 prev_still_x = None
 prev_still_xs = deque(maxlen=5)
@@ -64,6 +67,7 @@ oprev_ybs = deque(maxlen=10)
 cap = cv.VideoCapture(video_path)
 
 distances = []
+diameters = []
 
 while True:
     ret, frame = cap.read()
@@ -76,11 +80,14 @@ while True:
     x_still = still_edge(frame, top_y, bottom_y, prev_still_xs, right=True)
     prev_x = x_still
 
-    x_moving = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
-                             left=True)
+    x_moving, distance = moving_edge(frame, top_y, bottom_y, prev_moving_x, x_still,
+                                    left=True)
     prev_moving_x = x_moving
 
-    fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
+    d_mid = fluid_middle_diameter(frame, x_still, x_moving, top_y, bottom_y)
+
+    distances.append(distance)
+    diameters.append(d_mid)
 
     cv.line(frame, (0, top_y), (frame.shape[1], top_y), (0, 255, 0), 2)
     cv.line(frame, (0, bottom_y), (frame.shape[1], bottom_y), (0, 255, 0), 2)
@@ -93,3 +100,21 @@ while True:
 
 cap.release()
 cv.destroyAllWindows()
+
+# distances = distances[150:301]
+# diameters = diameters[150:301]
+
+fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+axs[0].plot(distances)
+axs[0].set_title('Distance')
+axs[0].set_xlabel('Frame')
+axs[0].set_ylabel('Distance (pixels)')
+axs[0].grid()
+
+axs[1].scatter(np.arange(0, len(diameters),1), diameters)
+axs[1].set_title('Diameter')
+axs[1].set_xlabel('Frame')
+axs[1].set_ylabel('Diameter (pixels)')
+axs[1].grid()
+
+plt.show()
