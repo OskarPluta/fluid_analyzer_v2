@@ -4,7 +4,9 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 class FluidDiameterMeasurement:
-    def __init__(self, video_path: str):
+    def __init__(self, downsize:tuple = (640, 480)):
+
+        self.downsize = downsize # resolution to find the edges of the fluid
 
         self.prev_still_x = None
         self.prev_still_xs = deque(maxlen=5)
@@ -192,6 +194,7 @@ class FluidDiameterMeasurement:
 
         lines = cv.HoughLinesP(masked_edges, 1, np.pi / 180, 1, minLineLength=20,
                                 maxLineGap=30)
+        
         if lines is None or len(lines) == 0:
             self.moving_x = self.prev_moving_x
             distance = abs(self.moving_x - self.still_x)
@@ -238,7 +241,7 @@ class FluidDiameterMeasurement:
 
     def fluid_middle_diameter(self, frame):
         """
-
+        Measures the diameter of the fluid in the rheometer.
         """
         
         if frame.shape[2] == 3:
@@ -247,32 +250,41 @@ class FluidDiameterMeasurement:
             gray_frame = np.copy(frame)
 
         mask = np.zeros_like(gray_frame)
-        mask[self.upper_line:self.lower_line, self.moving_x:self.still_x] = 255
+
+        x_ratio = gray_frame.shape[1] / self.downsize[0]
+        y_ratio = gray_frame.shape[0] / self.downsize[1]
+
+        mask_upper_line = int(self.upper_line * y_ratio)
+        mask_lower_line = int(self.lower_line * y_ratio)
+
+        mask_moving_x = int(self.moving_x * x_ratio)
+        mask_still_x = int(self.still_x * x_ratio)
+
+        mask[mask_upper_line:mask_lower_line, mask_moving_x:mask_still_x] = 255
 
         blurred_frame = cv.GaussianBlur(gray_frame, (3, 3), 0)
 
         edges = cv.Canny(blurred_frame, 20, 100, apertureSize=3)
         masked_edges = cv.bitwise_and(edges, mask)
+        cv.imshow("Masked Edges", masked_edges)
 
-        x_middle = (self.moving_x + self.still_x) // 2 # x-coordinate of the middle of the fluid
-        mid_values = masked_edges[self.upper_line:self.lower_line, x_middle] # values of a slice of the middle of the fluid
+        x_middle = (mask_moving_x + mask_still_x) // 2 # x-coordinate of the middle of the fluid
+        mid_values = masked_edges[mask_upper_line:mask_lower_line, x_middle] # values of a slice of the middle of the fluid
 
         yd_bottom = None # y-coordinate of the bottom of the middle diameter
         yd_top = None # y-coordinate of the top of the middle diameter
 
         for i, val in enumerate(mid_values):
             if val == 255:
-                yd_bottom = i + self.upper_line
+                yd_bottom = i + mask_upper_line
         for i, val in enumerate(mid_values[::-1]):
             if val == 255 :
-                yd_top = self.lower_line - i
+                yd_top = mask_lower_line - i
 
         if yd_bottom and yd_top:
             cv.line(frame, (x_middle, yd_top), (x_middle, yd_bottom), (255, 0, 255), 2)
             diameter = yd_bottom - yd_top # diameter of the fluid in the rheometer
             self.diameters.append(diameter)
-            if self.movement_end:
-                print("Diameter: ", diameter)
         else:
             self.diameters.append(-1) # if the diameter is not found, append -1
 
@@ -293,33 +305,35 @@ class FluidDiameterMeasurement:
 
     def measure(self, frame: np.ndarray):
         """
-        Measures the diameter of the fluid in the rheometer.
         """
         self.frame_index += 1
-        self.vertical_limits(frame)
-        self.still_edge(frame, right=True)
-        self.moving_edge(frame, left=True)
-        self.fluid_middle_diameter(frame)
+        frame_resized = cv.resize(frame, self.downsize)
+
+        self.vertical_limits(frame_resized)
+        self.still_edge(frame_resized, right=True)
+        self.moving_edge(frame_resized, left=True)
         self.is_moving()
+
+
+
+        self.fluid_middle_diameter(frame)
         
         
-video_path = "videos/C0210.MP4"
+video_path = "videos/C0209.MP4"
 cap = cv.VideoCapture(video_path)
 
-diameter_measurement = FluidDiameterMeasurement(video_path)
+diameter_measurement = FluidDiameterMeasurement()
 
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
 
-    frame = cv.resize(frame, (640, 480))
-
     diameter_measurement.measure(frame)
-    cv.line(frame, (0, diameter_measurement.upper_line), (frame.shape[1], diameter_measurement.upper_line), (0, 255, 0), 2)
-    cv.line(frame, (0, diameter_measurement.lower_line), (frame.shape[1], diameter_measurement.lower_line), (0, 255, 0), 2)
-    cv.line(frame, (diameter_measurement.still_x, diameter_measurement.upper_line), (diameter_measurement.still_x, diameter_measurement.lower_line), (255, 0, 0), 2)
-    cv.line(frame, (diameter_measurement.moving_x, diameter_measurement.upper_line), (diameter_measurement.moving_x, diameter_measurement.lower_line), (0, 0, 255), 2)
+    # cv.line(frame, (0, diameter_measurement.upper_line), (frame.shape[1], diameter_measurement.upper_line), (0, 255, 0), 2)
+    # cv.line(frame, (0, diameter_measurement.lower_line), (frame.shape[1], diameter_measurement.lower_line), (0, 255, 0), 2)
+    # cv.line(frame, (diameter_measurement.still_x, diameter_measurement.upper_line), (diameter_measurement.still_x, diameter_measurement.lower_line), (255, 0, 0), 2)
+    # cv.line(frame, (diameter_measurement.moving_x, diameter_measurement.upper_line), (diameter_measurement.moving_x, diameter_measurement.lower_line), (0, 0, 255), 2)
 
     cv.imshow("Vertical Limits", frame)
     if cv.waitKey(10) & 0xFF == ord('q'):
