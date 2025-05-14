@@ -266,7 +266,6 @@ class FluidDiameterMeasurement:
 
         edges = cv.Canny(blurred_frame, 20, 100, apertureSize=3)
         masked_edges = cv.bitwise_and(edges, mask)
-        cv.imshow("Masked Edges", masked_edges)
 
         x_middle = (mask_moving_x + mask_still_x) // 2 # x-coordinate of the middle of the fluid
         mid_values = masked_edges[mask_upper_line:mask_lower_line, x_middle] # values of a slice of the middle of the fluid
@@ -282,7 +281,6 @@ class FluidDiameterMeasurement:
                 yd_top = mask_lower_line - i
 
         if yd_bottom and yd_top:
-            cv.line(frame, (x_middle, yd_top), (x_middle, yd_bottom), (255, 0, 255), 2)
             diameter = yd_bottom - yd_top # diameter of the fluid in the rheometer
             self.diameters.append(diameter)
         else:
@@ -301,9 +299,8 @@ class FluidDiameterMeasurement:
                 self.movement_end = True
                 self.movement_end_index = self.frame_index
                 self.initial_diameter = self.diameters[-1]
-                print('now')
 
-    def measure(self, frame: np.ndarray):
+    def loop(self, frame: np.ndarray):
         """
         """
         self.frame_index += 1
@@ -313,8 +310,6 @@ class FluidDiameterMeasurement:
         self.still_edge(frame_resized, right=True)
         self.moving_edge(frame_resized, left=True)
         self.is_moving()
-
-
 
         self.fluid_middle_diameter(frame)
         
@@ -329,7 +324,7 @@ while cap.isOpened():
     if not ret:
         break
 
-    diameter_measurement.measure(frame)
+    diameter_measurement.loop(frame)
     # cv.line(frame, (0, diameter_measurement.upper_line), (frame.shape[1], diameter_measurement.upper_line), (0, 255, 0), 2)
     # cv.line(frame, (0, diameter_measurement.lower_line), (frame.shape[1], diameter_measurement.lower_line), (0, 255, 0), 2)
     # cv.line(frame, (diameter_measurement.still_x, diameter_measurement.upper_line), (diameter_measurement.still_x, diameter_measurement.lower_line), (255, 0, 0), 2)
