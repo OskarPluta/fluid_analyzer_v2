@@ -5,7 +5,7 @@ import ruptures as rpt
 
 signal = np.load('nowy3.npy')
 
-def niggalink_ai(signal: np.ndarray, n_bkps: int = 2) -> tuple:
+def detect_movement(signal: np.ndarray, n_bkps: int = 2) -> tuple:
     """
     Detect change points in the signal using the Kernel Change Point Detection algorithm.
     
