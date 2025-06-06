@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from collections import deque
 
-from utils import detect_movement
+# from utils import detect_movement
 
 
 class Preprocess:
@@ -160,7 +160,9 @@ class Preprocess:
 
         return white_pixels
     
-filepath = "videos/nowy2.MP4"
-signal = Preprocess().preprocess_video(filepath)
-start, stop = detect_movement(signal, n_bkps=2)
-print(f"Start: {start}, Stop: {stop}")
+
+if __name__ == "__main__":
+    filepath = "videos/nowy2.MP4"
+    signal = Preprocess().preprocess_video(filepath)
+    # start, stop = detect_movement(signal, n_bkps=2)
+    # print(f"Start: {start}, Stop: {stop}")
