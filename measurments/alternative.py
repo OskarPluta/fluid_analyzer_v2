@@ -32,6 +32,8 @@ class Measurment:
 
         # after it stops moving
 
+        """Bellow are some bullshit variables that will get deleted probably."""
+
         self.start_measurement = False # boolean to determine whether the machine is moving or not
         self.last_five_whites = deque(maxlen=5) 
         self.xd_counts = [] # do wyjebania
@@ -117,6 +119,8 @@ class Measurment:
         """
         Threshold the region of interest (ROI) in the frame to isolate the fluid
         track expansion.
+
+        Returns the number of white pixels in the thresholded ROI.
         """
         if frame.shape[2] == 3:
             gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -130,3 +134,42 @@ class Measurment:
         _, threshed_roi = cv.threshold(blurred_roi, 120, 255, cv.THRESH_BINARY)
         
         white_pixels = np.sum(threshed_roi == 255)
+
+        cv.imshow("Thresholded ROI", threshed_roi)
+        cv.waitKey(1)
+
+        return white_pixels
+    
+filepath = "videos/nowy3.mp4"
+Measurement_OG = Measurment()
+
+white_pixels_list = []
+
+cap = cv.VideoCapture(filepath)
+
+plt.ion()
+
+while 69:
+
+    ret, frame = cap.read()
+    if not ret:
+        print("End of video or some bullshit error")
+        break
+
+    frame = cv.resize(frame, Measurement_OG.size)
+    Measurement_OG.vertical_limits(frame)
+    white_pixels = Measurement_OG.thresh_roi(frame)
+
+    white_pixels_list.append(white_pixels)
+
+    plt.clf()
+    plt.plot(white_pixels_list)
+    plt.pause(0.01)
+
+
+signal = np.array(white_pixels_list)
+
+np.save("nowy3.npy", signal)
+
+plt.plot(white_pixels_list)
+plt.show()
