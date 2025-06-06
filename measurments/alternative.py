@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 
 from collections import deque
 
-class Measurment:
+# from utils import detect_movement
+
+
+class Preprocess:
 
     def __init__(self, size:tuple = (640, 480)):
 
@@ -34,9 +37,31 @@ class Measurment:
 
         """Bellow are some bullshit variables that will get deleted probably."""
 
+        """Bellow are some bullshit variables that will get deleted probably."""
+
         self.start_measurement = False # boolean to determine whether the machine is moving or not
         self.last_five_whites = deque(maxlen=5) 
         self.xd_counts = [] # do wyjebania
+        
+    
+    def preprocess_video(self, filepath: str):
+        white_pixels_list = []
+        cap = cv.VideoCapture(filepath)
+
+        while 69:
+            ret, frame = cap.read()
+            if not ret:
+                print("End of video or some bullshit error")
+                break
+            frame = cv.resize(frame, self.size)
+            self.vertical_limits(frame)
+            white_pixels = self.thresh_roi(frame)
+            white_pixels_list.append(white_pixels)
+        
+        cap.release()
+        return np.array(white_pixels_list)
+        
+
     def vertical_limits(self, frame: np.ndarray):
         """
         
@@ -134,42 +159,3 @@ class Measurment:
         _, threshed_roi = cv.threshold(blurred_roi, 120, 255, cv.THRESH_BINARY)
         
         white_pixels = np.sum(threshed_roi == 255)
-
-        cv.imshow("Thresholded ROI", threshed_roi)
-        cv.waitKey(1)
-
-        return white_pixels
-    
-filepath = "videos/nowy3.mp4"
-Measurement_OG = Measurment()
-
-white_pixels_list = []
-
-cap = cv.VideoCapture(filepath)
-
-plt.ion()
-
-while 69:
-
-    ret, frame = cap.read()
-    if not ret:
-        print("End of video or some bullshit error")
-        break
-
-    frame = cv.resize(frame, Measurement_OG.size)
-    Measurement_OG.vertical_limits(frame)
-    white_pixels = Measurement_OG.thresh_roi(frame)
-
-    white_pixels_list.append(white_pixels)
-
-    plt.clf()
-    plt.plot(white_pixels_list)
-    plt.pause(0.01)
-
-
-signal = np.array(white_pixels_list)
-
-np.save("nowy3.npy", signal)
-
-plt.plot(white_pixels_list)
-plt.show()
