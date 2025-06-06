@@ -24,4 +24,4 @@ def detect_movement(signal: np.ndarray, n_bkps: int = 2) -> tuple:
     
     start, stop, _ = result[0], result[1], result[2]
     
-    return start, stop, _
+    return start, stop
