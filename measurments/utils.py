@@ -16,7 +16,6 @@ def detect_movement(signal: np.ndarray, n_bkps: int = 2) -> tuple:
     Returns:
     - start: int - Start index of the first detected segment.
     - stop: int - End index of the last detected segment.
-    - _ : int - Placeholder for additional information (not used).
     """
     
     algo = rpt.KernelCPD(kernel="linear").fit(signal)
