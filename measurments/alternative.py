@@ -30,12 +30,16 @@ class Preprocess:
                 break
             frame = cv.resize(frame, self.size)
             top_limit, bottom_limit = vertical_limits(frame, self.prev_tops, self.prev_bots, self.size)
-
+            # frame = frame[top_limit:bottom_limit, :]  
             white_pixels = self.thresh_roi(int(np.mean(top_limit)),
                                             int(np.mean(bottom_limit)), frame)
             white_pixels_list.append(white_pixels)
-            cv.imshow('Video', frame)        
-        cap.release()
+            # cv.imshow('Video', frame) 
+            # cv.waitKey(1) & 0xFF
+            # if cv.waitKey(1) & 0xFF == ord('q'):
+                # break
+        # cv.destroyAllWindows()       
+        # cap.release()
         return np.array(white_pixels_list)
         
 
@@ -58,3 +62,5 @@ class Preprocess:
         _, threshed_roi = cv.threshold(blurred_roi, 120, 255, cv.THRESH_BINARY)
         
         white_pixels = np.sum(threshed_roi == 255)
+
+        return white_pixels

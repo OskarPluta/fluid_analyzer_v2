@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from collections import deque
 
-from utils import detect_movement
+from utils import detect_movement, vertical_limits
 from alternative import Preprocess
 
 
@@ -13,7 +13,14 @@ class Measure:
         self.filepath = filepath
         self.preprocess = Preprocess()
         self.signal = self.preprocess.preprocess_video(filepath)
+        # print(f"Signal shape: {self.signal.shape}")
         self.start, self.stop = self.get_movement()
+        # self.start = 1453
+        # self.stop = 1493
+        self.prev_bots = deque(maxlen=5)  # previous bottom line positions
+        self.prev_tops = deque(maxlen=5)  # previous top line positions
+        
+        self.size = (640, 480)  
         # self.start = 1453
         # self.stop = 1493
     def get_movement(self):
@@ -25,6 +32,13 @@ class Measure:
         cap.set(cv.CAP_PROP_POS_FRAMES, self.stop)
         while 69:
             ret, frame = cap.read()
+            frame = cv.resize(frame, self.size)
+
+            limits = vertical_limits(frame, self.preprocess.prev_tops, self.preprocess.prev_bots)
+            top_limit, bottom_limit = vertical_limits(frame, self.prev_tops, self.prev_bots, self.size)
+            # frame = frame[top_limit:bottom_limit, :]  
+            frame = frame[int(np.mean(top_limit)):int(np.mean(bottom_limit))]
+
             if not ret:
                 print("End of video or bullshit some error occurred")
                 break
