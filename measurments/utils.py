@@ -3,6 +3,8 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import ruptures as rpt
 
+from collections import deque
+
 
 def detect_movement(signal: np.ndarray, n_bkps: int = 2) -> tuple:
     """
@@ -68,7 +70,6 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
 
         if abs(avg_bots - bottom_line[1]) > frame.shape[0] * 0.05:
             bottom_line = (avg_bots, avg_bots)
-            print("ale chujnia")
 
     prev_tops.append((top_line[0] + top_line[1]) // 2)
     prev_bots.append((bottom_line[0] + bottom_line[1]) // 2)
