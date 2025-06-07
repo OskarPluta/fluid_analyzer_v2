@@ -56,7 +56,7 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
             x1, y1, x2, y2 = line[0]
             if np.abs(y2-y1) < frame.shape[1]*0.05:  # Check if the line is horizontal
                 horizontal_lines.append((y1, y2))
-
+            
 
     top_line = min(horizontal_lines, key=lambda x: x[0]+x[1])
     bottom_line = max(horizontal_lines, key=lambda x: x[0]+x[1])
