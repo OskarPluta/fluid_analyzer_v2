@@ -62,6 +62,8 @@ class Measure:
         """
         frame = np.copy(frame)
         cv.GaussianBlur(frame, (7, 7), 0, frame)
+        # clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        # frame = clahe.apply(frame)
         # Apply Scharr filter for edge detection
         scharr_x = cv.Scharr(frame, cv.CV_64F, 1, 0)
         scharr_y = cv.Scharr(frame, cv.CV_64F, 0, 1)
