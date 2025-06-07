@@ -12,10 +12,10 @@ class Measure:
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.preprocess = Preprocess()
-        # self.signal = self.preprocess.preprocess_video(filepath)
-        # self.start, self.stop = self.get_movement()
-        self.start = 1453
-        self.stop = 1493
+
+        self.signal = self.preprocess.preprocess_video(filepath)
+        self.start, self.stop = self.get_movement()
+
     def get_movement(self):
         start, stop = detect_movement(self.signal, n_bkps=2)
         return start, stop
