@@ -29,12 +29,13 @@ class Preprocess:
                 print("End of video or some bullshit error")
                 break
             frame = cv.resize(frame, self.size)
+
             top_limit, bottom_limit = vertical_limits(frame, self.prev_tops, self.prev_bots, self.size)
 
             white_pixels = self.thresh_roi(int(np.mean(top_limit)),
                                             int(np.mean(bottom_limit)), frame)
-            white_pixels_list.append(white_pixels)
-            cv.imshow('Video', frame)        
+            
+            white_pixels_list.append(white_pixels)  
         cap.release()
         return np.array(white_pixels_list)
         
@@ -56,5 +57,10 @@ class Preprocess:
 
         blurred_roi = cv.GaussianBlur(roi, (7, 7), 0)
         _, threshed_roi = cv.threshold(blurred_roi, 120, 255, cv.THRESH_BINARY)
-        
+
+        cv.imshow('Thresholded ROI', np.vstack([threshed_roi, roi]))
+        cv.waitKey(1)
+
         white_pixels = np.sum(threshed_roi == 255)
+
+        return white_pixels

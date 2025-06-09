@@ -14,17 +14,17 @@ class Measure:
         self.preprocess = Preprocess()
         self.signal = self.preprocess.preprocess_video(filepath)
         self.start, self.stop = self.get_movement()
-        # self.start = 1453
-        # self.stop = 1493
+
     def get_movement(self):
         start, stop = detect_movement(self.signal, n_bkps=2)
         return start, stop
 
     def start_video_capture(self):
         cap = cv.VideoCapture(self.filepath)
-        cap.set(cv.CAP_PROP_POS_FRAMES, self.stop)
+        cap.set(cv.CAP_PROP_POS_FRAMES, self.start)
         while 69:
             ret, frame = cap.read()
+            frame = cv.resize(frame, (640, 480))
             if not ret:
                 print("End of video or bullshit some error occurred")
                 break
@@ -115,6 +115,7 @@ class Measure:
 
 
 if __name__ == "__main__":
-    filepath = 'videos/nowy2.MP4'  # Replace with your video file path
-    measure = Measure(filepath).start_video_capture()
+    filepath = 'videos/C0697.MP4'  # Replace with your video file path
+    measure = Measure(filepath)
+    measure.start_video_capture()
     print(f"Movement starts at index: {measure.start}, stops at index: {measure.stop}")

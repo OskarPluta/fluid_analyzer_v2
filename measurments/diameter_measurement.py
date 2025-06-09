@@ -34,6 +34,17 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
                 horizontal_lines.append((y1, y2))
 
 
+    # Convert canny edges to BGR for visualization
+    canny_bgr = cv.cvtColor(canny_edges, cv.COLOR_GRAY2BGR)
+
+    # Draw all horizontal lines on the canny edges image
+    for y1, y2 in horizontal_lines:
+        cv.line(canny_bgr, (0, y1), (frame.shape[1], y2), (0, 255, 0), 2)
+
+    # Display the canny edges with horizontal lines
+    cv.imshow('Horizontal Lines', canny_bgr)
+
+    
     top_line = min(horizontal_lines, key=lambda x: x[0]+x[1])
     bottom_line = max(horizontal_lines, key=lambda x: x[0]+x[1])
 
@@ -53,7 +64,7 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
 
     return top_line, bottom_line
 
-cap = cv.VideoCapture('videos/C0209.MP4')
+cap = cv.VideoCapture('videos/xd2.MP4')
 
 prev_tops = deque(maxlen=5)
 prev_bots = deque(maxlen=5)
