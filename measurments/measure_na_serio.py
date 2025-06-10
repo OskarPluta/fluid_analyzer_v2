@@ -93,13 +93,7 @@ class Measure:
         
         # Apply Gaussian blur to reduce noise
         blurred = cv.GaussianBlur(frame, (5, 5), 0)
-
-        # Apply Canny edge detection
-        # edges = cv.Canny(blurred, 50, 150)
-
-        
-
-
+       
         # Return the edge-detected frame
         frame = edges
         
