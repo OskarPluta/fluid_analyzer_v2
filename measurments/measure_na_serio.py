@@ -76,13 +76,7 @@ class Measure:
                 break
         cap.release()
         cv.destroyAllWindows()
-    
-    def get_histogram(self, frame):
-        """
-        This function will calculate the histogram of the frame.
-        """
-        hist = cv.calcHist([frame], [0], None, [256], [0, 256])
-        return hist
+        
     
 
 if __name__ == "__main__":

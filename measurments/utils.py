@@ -112,4 +112,11 @@ def horizontal_limits(frame):
         left_end = left_rect[0] + left_rect[2]  # x + width of left contour
         right_start = right_rect[0]  # x of right contour
     return left_end, right_start
+
+def get_histogram(self, frame):
+    """
+    This function will calculate the histogram of the frame.
+    """
+    hist = cv.calcHist([frame], [0], None, [256], [0, 256])
+    return hist
         
