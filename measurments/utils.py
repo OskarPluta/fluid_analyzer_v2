@@ -88,13 +88,13 @@ def horizontal_limits(frame):
     else:
         gray_frame = np.copy(frame)
     gray_frame = cv.GaussianBlur(gray_frame, (7, 7), 0, frame)
-    scharr_x = cv.Scharr(gray_frame, cv.CV_64F, 1, 0)
-    scharr_y = cv.Scharr(gray_frame, cv.CV_64F, 0, 1)
-    scharr = np.sqrt(scharr_x**2 + scharr_y**2)
-    scharr = np.uint8(scharr)
-    scharr = cv.GaussianBlur(frame, (7, 7), 0, frame)
+    # scharr_x = cv.Scharr(gray_frame, cv.CV_64F, 1, 0)
+    # scharr_y = cv.Scharr(gray_frame, cv.CV_64F, 0, 1)
+    # scharr = np.sqrt(scharr_x**2 + scharr_y**2)
+    # scharr = np.uint8(scharr)
+    scharr = cv.GaussianBlur(gray_frame, (7, 7), 0, frame)
     scharr = cv.morphologyEx(scharr, cv.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=5)
-    scharr = cv.cvtColor(scharr, cv.COLOR_BGR2GRAY)
+    # scharr = cv.cvtColor(scharr, cv.COLOR_BGR2GRAY)
     _, threshed = cv.threshold(scharr, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
     contours = cv.findContours(threshed, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)[0]
     # find the two largest contours 
@@ -113,7 +113,7 @@ def horizontal_limits(frame):
         right_start = right_rect[0]  # x of right contour
     return left_end, right_start
 
-def get_histogram(self, frame):
+def get_histogram(frame):
     """
     This function will calculate the histogram of the frame.
     """
