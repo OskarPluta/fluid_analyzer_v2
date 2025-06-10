@@ -36,12 +36,12 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
     call.
     """
 
-    frame = cv.resize(frame, size)
-
     if frame.shape[2] == 3:
         gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     else:
         gray_frame = np.copy(frame)
+
+    gray_frame = cv.resize(gray_frame, size)
 
     blurred_frame = cv.GaussianBlur(gray_frame, (7, 7), 0)
 
