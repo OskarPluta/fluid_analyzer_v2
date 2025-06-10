@@ -14,15 +14,19 @@ class Measure:
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.preprocess = Preprocess()
-        self.signal = self.preprocess.preprocess_video(filepath)
+        # self.signal = self.preprocess.preprocess_video(filepath)
 
         self.prev_bots = deque(maxlen=5)  # previous bottom line positions
         self.prev_tops = deque(maxlen=5)  # previous top line positions
         
         self.size = (640, 480)  
-        self.start, self.stop = self.get_movement()
-        # self.start, self.stop = 1708, 1748
+        # self.start, self.stop = self.get_movement()
+        self.start, self.stop = 2031, 2082
         self.left_limit, self.right_limit = self.get_horizontal_limits(self.stop)
+
+
+        self.smallest_diameter_x = None
+        self.diameters = []
 
 
     def get_horizontal_limits(self, frame_index: int, number_of_frames: int = 100):
@@ -108,6 +112,7 @@ class Measure:
 
         indices_255 = np.where(middle_ys == 255)[0]
         
+        # reject everything that is outside the limits as noise
         if len(indices_255) > 0:
             first_index = indices_255[0]
             last_index = indices_255[-1]
@@ -131,6 +136,7 @@ class Measure:
                 break
             
             roi = frame[top_limit:bottom_limit, left_limit:right_limit]
+            middle_point = roi.shape[1] // 2
             roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
             scharr_x = cv.Scharr(roi, cv.CV_64F, 1, 0)
             scharr_y = cv.Scharr(roi, cv.CV_64F, 0, 1)
@@ -142,12 +148,23 @@ class Measure:
 
             _, threshed = cv.threshold(scharr, 15, 255, cv.THRESH_BINARY)
             threshed = cv.morphologyEx(threshed, cv.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=3)
+
+            middle_column = threshed[:, middle_point]
+            indices_255 = np.where(middle_column == 255)[0]
+            if len(indices_255) > 1:
+                diameter = indices_255[-1] - indices_255[0]
+                cv.line(threshed, (middle_point, indices_255[0]), (middle_point, indices_255[-1]), 127, 5)
+                self.diameters.append(diameter)
+
             cv.line(threshed, (0, first_index), (threshed.shape[1], first_index), 127, 5)
             cv.line(threshed, (0, last_index), (threshed.shape[1], last_index), 127, 5)
             cv.imshow('Fluid Contours', np.vstack([scharr, threshed]))
 
 if __name__ == "__main__":
-    filepath = 'videos/nowy3.MP4'  # Replace with your video file path
+    filepath = 'videos/nowy1.MP4'  # Replace with your video file path
     measure = Measure(filepath)
     measure.fluid_contours()
     print(f"Movement starts at index: {measure.start}, stops at index: {measure.stop}")
+    plt.plot(measure.diameters)
+    plt.title('Diameters of the fluid track')
+    plt.show()
