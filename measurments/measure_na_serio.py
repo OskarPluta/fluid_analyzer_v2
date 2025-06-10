@@ -11,8 +11,8 @@ from alternative import Preprocess
 class Measure:
     def __init__(self, filepath: str):
         self.filepath = filepath
-        self.preprocess = Preprocess()
-        self.signal = self.preprocess.preprocess_video(filepath)
+        # self.preprocess = Preprocess()
+        # self.signal = self.preprocess.preprocess_video(filepath)
 
         self.prev_bots = deque(maxlen=5)  # previous bottom line positions
         self.prev_tops = deque(maxlen=5)  # previous top line positions
@@ -20,8 +20,8 @@ class Measure:
         self.size = (640, 480)  
         # self.start = 1453
         # self.stop = 1492 # stop real 2683 for 3
-        self.start, self.stop = self.get_movement()
-        # self.start, self.stop = 2031, 2082
+        # self.start, self.stop = self.get_movement()
+        self.start, self.stop = 2634, 2683  
         self.left_limit, self.right_limit = self.get_horizontal_limits(self.stop)
         print(self.left_limit, self.right_limit)
     
@@ -70,7 +70,7 @@ class Measure:
             # frame = frame[top_limit:bottom_limit, :]  
             frame = frame[int(np.mean(top_limit)):int(np.mean(bottom_limit))]
             horizontal_frame = frame[:, self.left_limit:self.right_limit]
-
+            horizontal_frame = self.measure_diameter(horizontal_frame)
             cv.imshow('Video', frame)
 
             cv.imshow('Scharr', horizontal_frame)
@@ -86,6 +86,24 @@ class Measure:
         hist = cv.calcHist([frame], [0], None, [256], [0, 256])
         return hist
     
+    def measure_diameter(self, frame):
+        """
+        This function will measure the diameter of the fluid track in the frame..
+        """
+        
+        # Apply Gaussian blur to reduce noise
+        blurred = cv.GaussianBlur(frame, (5, 5), 0)
+
+        # Apply Canny edge detection
+        # edges = cv.Canny(blurred, 50, 150)
+
+        
+
+
+        # Return the edge-detected frame
+        frame = edges
+        
+        return frame
 
 if __name__ == "__main__":
     filepath = 'videos/nowy3.MP4'  # Replace with your video file path
