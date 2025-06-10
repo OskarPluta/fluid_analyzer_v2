@@ -92,11 +92,16 @@ class Measure:
         """
         
         # Apply Gaussian blur to reduce noise
+        frame = np.copy(frame)
+        frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         blurred = cv.GaussianBlur(frame, (5, 5), 0)
-       
-        # Return the edge-detected frame
-        frame = edges
-        
+
+        opening = cv.morphologyEx(blurred, cv.MORPH_OPEN, np.ones((5, 5), np.uint8), iterations=10)
+        frame = opening
+
+        cv.medianBlur(frame, 5, frame)    
+        # edges = cv.Canny(frame, 50, 150, apertureSize=3)
+        # frame = edges
         return frame
 
 if __name__ == "__main__":
