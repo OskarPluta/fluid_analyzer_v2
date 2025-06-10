@@ -130,7 +130,6 @@ class Measure:
             if cv.waitKey(20) & 0xFF == ord('q'):
                 break
             
-
             roi = frame[top_limit:bottom_limit, left_limit:right_limit]
             roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
             scharr_x = cv.Scharr(roi, cv.CV_64F, 1, 0)
