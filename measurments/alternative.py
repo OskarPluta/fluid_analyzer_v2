@@ -62,8 +62,8 @@ class Preprocess:
         blurred_roi = cv.GaussianBlur(roi, (7, 7), 0)
         _, threshed_roi = cv.threshold(blurred_roi, 120, 255, cv.THRESH_BINARY)
 
-        cv.imshow('Thresholded ROI', np.vstack([threshed_roi, roi]))
-        cv.waitKey(1)
+        # cv.imshow('Thresholded ROI', np.vstack([threshed_roi, roi]))
+        # cv.waitKey(1)
 
         white_pixels = np.sum(threshed_roi == 255)
 
