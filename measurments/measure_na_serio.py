@@ -19,7 +19,7 @@ class Measure:
         
         self.size = (640, 480)  
         self.start, self.stop = self.get_movement()
-        # self.start, self.stop = 2031, 2082
+        # self.start, self.stop = 1312, 1368
 
     def get_movement(self):
         start, stop = detect_movement(self.signal, n_bkps=2)
@@ -35,16 +35,21 @@ class Measure:
                 print("End of video or bullshit some error occurred")
                 break
             frame = cv.resize(frame, self.size)
-            scharr_frame = self.diameter(frame)
+
+            left_limit, right_limit = self.horizontal_limits(frame)
+
+            # Draw the horizontal limits on the frame
+            cv.line(frame, (left_limit, 0), (left_limit, frame.shape[0]), (255, 0, 0), 2)
+            cv.line(frame, (right_limit, 0), (right_limit, frame.shape[0]), (255, 0, 0), 2)
             cv.imshow('Video', frame)
 
-            cv.imshow('Scharr', scharr_frame)
+
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
         cap.release()
         cv.destroyAllWindows()
     
-    def diameter(self, frame):
+    def horizontal_limits(self, frame):
         """
         This function will calculate the diameter of the fluid track
         using the top and bottom limits of the fluid track.
@@ -68,12 +73,26 @@ class Measure:
         scharr = cv.morphologyEx(scharr, cv.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=5)
         scharr = cv.cvtColor(scharr, cv.COLOR_BGR2GRAY)
         _, threshed = cv.threshold(scharr, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+        threshed = cv.morphologyEx(threshed, cv.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=5)
        
-        return threshed
+        contours, _ = cv.findContours(threshed, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=cv.contourArea, reverse=True)[:2]
+
+        
+        x_limits = []
+
+        for contour in contours:
+            x_values = contour[:, 0, 0]
+            x_limits.append(np.min(x_values))
+            x_limits.append(np.max(x_values))
+
+        x_limits = sorted(x_limits)
+
+        return x_limits[1], x_limits[2]
         
 
 if __name__ == "__main__":
-    filepath = 'videos/nowy4.MP4'  # Replace with your video file path
+    filepath = 'videos/nowy2.MP4'  # Replace with your video file path
     measure = Measure(filepath)
     measure.start_video_capture()
     print(f"Movement starts at index: {measure.start}, stops at index: {measure.stop}")

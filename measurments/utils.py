@@ -31,9 +31,10 @@ def vertical_limits(frame: np.ndarray, prev_tops: deque,
                     prev_bots: deque, size: tuple = (640, 480)):
 
     """
+    This function finds the vertical limits of the extending part.
     In order for this super function to work it needs two empty deques on first
     call.
-"""
+    """
 
     frame = cv.resize(frame, size)
 
